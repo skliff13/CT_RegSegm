@@ -23,3 +23,6 @@ if __name__ == '__main__':
             rs.process_file('test_data/test_image.nii.gz')
         else:
             print('\nOnly .NII.GZ files are supported\n')
+    else:
+        print('File or directory not found: ' + path)
+        exit(2)
