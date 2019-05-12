@@ -14,4 +14,3 @@ registration_py/
 resized_data/
 test_images/
 *.nii.gz
-config.json

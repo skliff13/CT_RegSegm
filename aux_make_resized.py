@@ -10,8 +10,8 @@ def main():
     with open('config.json', 'r') as f:
         config = json.load(f)
 
-    dir_initial = config['dir_initial']
-    dir_segmented = config['dir_segmented']
+    dir_initial = '/path/to/original/images'
+    dir_segmented = '/path/to/segmented/images'
 
     out_dir = 'resized_data'
 

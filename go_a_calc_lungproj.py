@@ -20,7 +20,7 @@ def save_lungproj(filename):
 
 
 def main():
-    dr = '/path/to/NII/initial/'
+    dr = '/path/to/original/images/'
 
     for i in range(130):
         fn = 'id%03i.nii.gz' % (i + 1)

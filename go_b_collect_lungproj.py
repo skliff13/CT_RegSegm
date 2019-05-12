@@ -3,7 +3,7 @@ import numpy as np
 
 
 def main():
-    dr = '/path/to/NII/initial/'
+    dr = '/path/to/original/images/'
 
     tbl = None
     for i in range(130):
