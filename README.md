@@ -13,6 +13,7 @@ scikit-image
 scipy
 pandas
 nibabel
+imageio
 ```
 
 * __Elastix__ tool installed in your `PATH`. 
@@ -29,8 +30,8 @@ into the repository root directory.
 
 ### Running the scripts
 
-The scripts can be run directly from Python (see `go_c_regsegm.py`)
-or from command line using `run_regsegm.py` script. Examples:
+The scripts can be run directly from Python (see [go_c_regsegm.py](go_c_regsegm.py))
+or from command line using [run_regsegm.py](run_regsegm.py) script. Examples:
 
 ```
 python3 run_regsegm.py test_data/test_image.nii.gz
@@ -38,3 +39,6 @@ python3 run_regsegm.py test_data/test_image.nii.gz
 
 If succeeded, the `*_regsegm_py.nii.gz` files containing the lung masks should appear.
 
+Result examples:
+
+![Alt_text](result1.gif) ![Alt_text](result2.gif) 
