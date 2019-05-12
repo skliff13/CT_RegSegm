@@ -3,7 +3,6 @@ import json
 import numpy as np
 
 import regsegm_utils as reg
-from go_c_regsegm import makeUint8
 
 
 def main():
@@ -26,7 +25,7 @@ def main():
 
         print('Reading ' + img_path)
         img = reg.advAnalyzeNiiRead(img_path)[0]
-        img = makeUint8(img)
+        img = reg.makeUint8(img)
         img = img[::rs, ::rs, :]
 
         out_path = os.path.join(out_dir, 'id%03i_img.npz' % i)
@@ -35,7 +34,7 @@ def main():
 
         print('Reading ' + msk_path)
         msk = reg.advAnalyzeNiiRead(msk_path)[0]
-        msk = makeUint8(msk)
+        msk = reg.makeUint8(msk)
         msk[msk > 0] = pos_val
         msk[msk == 0] = 0
         msk = msk[::rs, ::rs, :]

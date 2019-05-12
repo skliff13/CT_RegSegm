@@ -11,6 +11,4 @@ __pycache__/
 
 #### User files and folders
 registration_py/
-resized_data/
-test_images/
 *.nii.gz

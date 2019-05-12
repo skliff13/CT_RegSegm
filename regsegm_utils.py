@@ -149,3 +149,12 @@ def lungproj(lung, pxdim):
 
     proj = np.asarray([proj])
     return proj, xyzb
+
+
+def makeUint8(im):
+    im = im * 0.17
+    im[im < 0] = 0
+    im[im > 255] = 255
+    im = im.astype(np.uint8)
+
+    return im
