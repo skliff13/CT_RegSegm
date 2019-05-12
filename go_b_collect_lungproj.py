@@ -1,9 +1,9 @@
-
 import pandas as pd
 import numpy as np
 
+
 def main():
-    dr = 'd:/IMG/CRDF/NII/initial/'
+    dr = '/path/to/NII/initial/'
 
     tbl = None
     for i in range(130):
@@ -24,6 +24,7 @@ def main():
     df.to_csv(fno, header=False, index=False)
 
     print('FINISHED')
+
 
 if __name__ == '__main__':
     main()

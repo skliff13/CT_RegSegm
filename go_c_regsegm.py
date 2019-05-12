@@ -1,4 +1,3 @@
-
 import os
 import shutil
 import pandas as pd
@@ -7,6 +6,7 @@ import nibabel as nb
 from scipy.spatial import distance_matrix
 import regsegm_utils as reg
 from regsegm_logging import logmess
+
 
 def shift3(im, sz, xyzsrc, xyztrg):
     mult = 1.0e-5
@@ -54,6 +54,7 @@ def shift3(im, sz, xyzsrc, xyztrg):
     im = im / mult
     return im
 
+
 def makeUint8(im):
     im = im * 0.17
     im[im < 0] = 0
@@ -61,6 +62,7 @@ def makeUint8(im):
     im = im.astype(np.uint8)
 
     return im
+
 
 def ctregsegm(filename, lunprojFilename, initDir, maskDir, outDir, regFilesStorage):
 
@@ -146,7 +148,8 @@ def ctregsegm(filename, lunprojFilename, initDir, maskDir, outDir, regFilesStora
 
     return 0
 
-def main():
+
+def process_dir():
     dr = r'd:\DATA\ImageCLEF\2019\downloaded\clef2019\TrainingSet\test'
 
     dr0 = 'd:/DATA/CRDF/NII/initial/'
@@ -168,5 +171,6 @@ def main():
 
     print('FINISHED')
 
+
 if __name__ == '__main__':
-    main()
+    process_dir()

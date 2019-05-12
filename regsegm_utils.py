@@ -74,14 +74,13 @@ def advAnalyzeNiiRead(fn):
     im = im[:, ::-1, :]
     pxdim = np.abs(np.diag(afn[:3, :3]))
 
-    if pxdim[2] > 3:
-        newsz = (im.shape[0], im.shape[1], im.shape[2] // 2)
-        im = imresize(im, newsz, order=0)
-        pxdim[2] = pxdim[2] / 2
-    elif pxdim[2] < 1.5:
+    if pxdim[2] < 1.5:
+        im = im[:, :, ::2].copy()
+        pxdim[2] *= 2
+    elif pxdim[2] > 3:
         newsz = (im.shape[0], im.shape[1], im.shape[2] * 2)
         im = imresize(im, newsz, order=0)
-        pxdim[2] = pxdim[2] * 2
+        pxdim[2] /= 2
 
     return im, pxdim, afn
 

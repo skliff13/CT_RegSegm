@@ -1,7 +1,7 @@
-
 import pandas as pd
 import numpy as np
 import regsegm_utils as reg
+
 
 def save_lungproj(filename):
     im, pxdim, affine = reg.advAnalyzeNiiRead(filename)
@@ -18,8 +18,9 @@ def save_lungproj(filename):
 
     return 0
 
+
 def main():
-    dr = 'd:/IMG/CRDF/NII/initial/'
+    dr = '/path/to/NII/initial/'
 
     for i in range(130):
         fn = 'id%03i.nii.gz' % (i + 1)
@@ -29,6 +30,7 @@ def main():
         save_lungproj(path)
 
     print('FINISHED')
+
 
 if __name__ == '__main__':
     main()
