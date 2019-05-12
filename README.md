@@ -1,5 +1,7 @@
 # CT_RegSegm
-Segmentation of lungs in 3D Computed Tomography (CT) scans via non-rigid image registration
+Segmentation of lungs in 3D Computed Tomography (CT) scans via non-rigid image registration scheme [\[1\]](#references).
+
+Short description of the current implementation can be found in [\[2\]](#references). 
 
 ### Requirements
 
@@ -42,3 +44,16 @@ If succeeded, the `*_regsegm_py.nii.gz` files containing the lung masks should a
 Result examples:
 
 ![Alt_text](result1.gif) ![Alt_text](result2.gif) 
+
+### References
+
+[1] Sluimer I, Prokop M, van Ginneken B. Toward automated
+segmentation of the pathological lung in CT. IEEE Trans
+Med Imaging 2005;24(8):1025–1038. 
+(URL: https://www.ncbi.nlm.nih.gov/pubmed/16092334)
+
+[2] Liauchuk, V., Kovalev, V.: ImageCLEF 2017: Supervoxels and co-occurrence for
+tuberculosis CT image classification. 
+In: CLEF2017 Working Notes. CEUR Workshop Proceedings, Dublin, Ireland, 
+CEUR-WS.org <http://ceur-ws.org> (September 11-14 2017) 
+(URL: http://ceur-ws.org/Vol-1866/paper_146.pdf).
