@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 import nibabel as nb
@@ -6,6 +5,7 @@ from skimage import measure, transform
 from scipy.ndimage.morphology import binary_dilation
 
 from regsegm_logging import logmess
+
 
 def imresize(m, newshape, order=1, mode='constant'):
     dtype = m.dtype
@@ -16,6 +16,7 @@ def imresize(m, newshape, order=1, mode='constant'):
     m = m * mult
 
     return m.astype(dtype=dtype)
+
 
 def writeMHD(filename, im, datatype):
     with open(filename + '.mhd', 'w') as f:
@@ -30,11 +31,13 @@ def writeMHD(filename, im, datatype):
     im = np.swapaxes(im, 0, 2).copy()
     im.tofile(filename + '.raw')
 
+
 def readMHD_simple(filename, shape):
     arr = np.fromfile(filename + '.raw', dtype=np.uint8)
     arr = np.reshape(arr, shape[::-1])
     im = np.swapaxes(arr, 0, 2).copy()
     return im
+
 
 def changeTransformParametersFile(oldfile, newfile):
     with open(oldfile, 'rt') as f1:
@@ -46,6 +49,7 @@ def changeTransformParametersFile(oldfile, newfile):
             if toFind in line:
                 line = toFind + ' 0)\n'
             f2.write(line)
+
 
 def register3d(mov, fxd, movmsk, outDir):
     writeMHD(outDir + '/moving', mov, 'char')
@@ -66,6 +70,7 @@ def register3d(mov, fxd, movmsk, outDir):
 
     return movedmsk
 
+
 def advAnalyzeNiiRead(fn):
     im = nb.load(fn)
     afn = im.affine
@@ -83,6 +88,7 @@ def advAnalyzeNiiRead(fn):
         pxdim[2] /= 2
 
     return im, pxdim, afn
+
 
 def catchLungs(im3, pxdim):
     d3 = int(round(2.5 / pxdim[2]))
@@ -108,6 +114,7 @@ def catchLungs(im3, pxdim):
     lung = lbl[::2, ::2, ::2] > 0
     return lung
 
+
 def trimProjection(proj):
     cumsum = np.cumsum(proj.astype(np.float) / np.sum(proj))
 
@@ -122,6 +129,7 @@ def trimProjection(proj):
     proj = proj.astype(np.float32) / proj.sum()
 
     return proj, np.asarray(bounds)
+
 
 def lungproj(lung, pxdim):
     xproj = np.sum(lung, axis=(0, 2)).flatten()

@@ -1,4 +1,3 @@
-
 import time
 import datetime
 
@@ -12,9 +11,10 @@ def logmess(outDir, str=None):
     if str is None:
         with open(outDir + '/' + logfile, 'w') as f:
             f.write('\n==================================================\n')
-        str = 'CTRegSegm v0.1 started'
+        str = 'CT_RegSegm v0.1 started'
 
     str = str.replace('\\', '/')
 
     with open(outDir + '/' + logfile, 'a') as f:
+        print(str)
         f.write(st + ' -- ' + str + '\n')

@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 import pandas as pd
 import numpy as np
@@ -64,37 +65,32 @@ def makeUint8(im):
     return im
 
 
-def ctregsegm(filename, lunprojFilename, initDir, maskDir, outDir, regFilesStorage):
+def ct_reg_segm(file_path, lungs_proj_filename, resized_data_dir, reg_dir, reg_files_storage):
+    os.makedirs(reg_dir, exist_ok=True)
 
-    if not os.path.isdir(outDir):
-        os.mkdir(outDir)
+    logmess(reg_dir)
 
-    logmess(outDir)
+    copy_files_from_storage(reg_dir, reg_files_storage)
 
-    logmess(outDir, 'Copying files from ' + regFilesStorage)
-    files = os.listdir(regFilesStorage + '/')
-    for file in files:
-        if file.endswith('.txt'):
-            src = regFilesStorage + '/' + file
-            dst = outDir + '/' + file
-            shutil.copyfile(src, dst)
+    with open('config.json', 'r') as f:
+        config = json.load(f)
 
-    nsim = 5
-    rs = 4
-    # shift = 2
+    nsim = config['num_nearest']
+    rs = config['slice_resize']
+    posval = config['200']
 
-    logmess(outDir, 'Reading lung projections from ' + lunprojFilename)
-    df = pd.read_csv(lunprojFilename, header=None)
+    logmess(reg_dir, 'Reading lung projections from ' + lungs_proj_filename)
+    df = pd.read_csv(lungs_proj_filename, header=None)
     lprojs = df.get_values()
     xyzbs = lprojs[:, 300:306]
     lprojs = lprojs[:, 0:300]
 
-    logmess(outDir, 'Reading 3D image from ' + filename)
-    im, pxdim, affine = reg.advAnalyzeNiiRead(filename)
+    logmess(reg_dir, 'Reading 3D image from ' + file_path)
+    im, pxdim, affine = reg.advAnalyzeNiiRead(file_path)
 
-    logmess(outDir, 'Coarse extraction of lungs')
+    logmess(reg_dir, 'Coarse extraction of lungs')
     lng = reg.catchLungs(im, pxdim)
-    logmess(outDir, 'Calculating lung projections')
+    logmess(reg_dir, 'Calculating lung projections')
     proj, xyzb = reg.lungproj(lng, pxdim)
 
     ds = distance_matrix(proj, lprojs).flatten()
@@ -104,73 +100,78 @@ def ctregsegm(filename, lunprojFilename, initDir, maskDir, outDir, regFilesStora
     else:
         ids = idx[0:nsim] + 1
 
-    posval = 200
-    imr = makeUint8(im[::rs, ::rs, :]).copy()
-    meanmsk = (imr * 0).astype(np.float32)
+    fixed = makeUint8(im[::rs, ::rs, :]).copy()
+    mean_mask = (fixed * 0).astype(np.float32)
     for j in range(nsim):
-        fn = '%sid%03i.nii.gz' % (initDir, ids[j])
-        logmess(outDir, 'Similar image #%i: Reading image from %s' % (j + 1, fn))
-        mov = reg.advAnalyzeNiiRead(fn)[0]
-        mov = makeUint8(shift3(mov, im.shape, xyzbs[ids[j] - 1, :], xyzb))
+        xyzb1 = xyzbs[ids[j] - 1, :]
 
-        fn = '%sid%03i_resegm2.nii.gz' % (maskDir, ids[j])
-        logmess(outDir, 'Similar image #%i: Reading mask from %s' % (j + 1, fn))
-        msk = reg.advAnalyzeNiiRead(fn)[0]
-        msk = makeUint8(shift3(msk, im.shape, xyzbs[ids[j] - 1, :], xyzb))
-        msk[msk > 0] = posval
-        msk[msk == 0] = 0
+        path = os.path.join(resized_data_dir, 'id%03i_img.npz' % ids[j])
+        logmess(reg_dir, 'Similar image #%i: Reading image from %s' % (j + 1, path))
+        data = np.load(path)
+        moving = data[data.files[0]]
+        moving = shift3(moving, fixed.shape, xyzb1 // rs, xyzb // rs).astype(np.uint8)
 
-        mov = mov[::rs, ::rs, :]
-        msk = msk[::rs, ::rs, :]
+        path = os.path.join(resized_data_dir, 'id%03i_msk.npz' % ids[j])
+        logmess(reg_dir, 'Similar image #%i: Reading mask from %s' % (j + 1, path))
+        data = np.load(path)
+        mask = data[data.files[0]]
+        mask = shift3(mask, fixed.shape, xyzb1 // rs, xyzb // rs).astype(np.uint8)
 
-        logmess(outDir, 'Similar image #%i: Registration' % (j + 1))
-        movedmsk = reg.register3d(mov, imr, msk, outDir)
+        logmess(reg_dir, 'Similar image #%i: Registration' % (j + 1))
+        moved_mask = reg.register3d(moving, fixed, mask, reg_dir)
 
-        meanmsk = meanmsk + movedmsk.astype(np.float32) / posval / nsim
+        mean_mask += moved_mask.astype(np.float32) / posval / nsim
 
-    logmess(outDir, 'Resizing procedures')
-    meanmsk[meanmsk < 0.5] = 0
-    meanmsk[meanmsk >= 0.5] = 1
-    # meanmsk = meanmsk[::-1, :, :]
-    meanmsk = meanmsk[:, ::-1, :]
-    meanmsk = np.swapaxes(meanmsk, 0, 1)
+    logmess(reg_dir, 'Resizing procedures')
+    mean_mask[mean_mask < 0.5] = 0
+    mean_mask[mean_mask >= 0.5] = 1
+    mean_mask = mean_mask[:, ::-1, :]
+    mean_mask = np.swapaxes(mean_mask, 0, 1)
 
-    meanmsk = reg.imresize(meanmsk, im.shape, order=0)
-    meanmsk = meanmsk.astype(np.int16)
+    mean_mask = reg.imresize(mean_mask, im.shape, order=0)
+    mean_mask = mean_mask.astype(np.int16)
     affine = np.abs(affine) * np.eye(4, 4)
     affine[1, 1] = -affine[1, 1]
     affine[0, 0] = -affine[0, 0]
-    nii = nb.Nifti1Image(meanmsk, affine)
+    nii = nb.Nifti1Image(mean_mask, affine)
 
-    fno = filename[:-7] + '_regsegm_py.nii.gz'
-    logmess(outDir, 'Saving result to ' + fno)
+    fno = file_path[:-7] + '_regsegm_py.nii.gz'
+    logmess(reg_dir, 'Saving result to ' + fno)
     nb.save(nii, fno)
 
     return 0
 
 
-def process_dir():
-    dr = r'd:\DATA\ImageCLEF\2019\downloaded\clef2019\TrainingSet\test'
+def copy_files_from_storage(reg_dir, reg_files_storage):
+    logmess(reg_dir, 'Copying files from ' + reg_files_storage)
+    files = os.listdir(reg_files_storage + '/')
+    for file in files:
+        if file.endswith('.txt'):
+            src = reg_files_storage + '/' + file
+            dst = reg_dir + '/' + file
+            shutil.copyfile(src, dst)
 
-    dr0 = 'd:/DATA/CRDF/NII/initial/'
-    drr = 'd:/DATA/CRDF/NII/resegm2/'
-    outdir = 'registration_py'
-    regFilesStorage = 'regFiles/'
 
-    lunprojfn = 'lungproj_xyzb_130_py.txt'
-    fileEnding = '.nii.gz'
-    files = os.listdir(dr)
+def process_dir(target_dir):
+    resized_data_dir = 'resized_data'
+    reg_dir = 'registration_py'
+    reg_files_storage = 'regFiles/'
 
-    for fn in files:
-        path = dr + '/' + fn
-        outpath = dr + '/' + fn[:-7] + '_regsegm_py.nii.gz'
-        if fn.endswith(fileEnding) and (not '_regsegm' in fn) and (not os.path.isfile(outpath)):
-            print('Processing "' + fn + '"')
+    lungs_proj_filename = 'lungproj_xyzb_130_py.txt'
+    file_ending = '.nii.gz'
+    files = os.listdir(target_dir)
 
-            ctregsegm(path, lunprojfn, dr0, drr, outdir, regFilesStorage)
+    for file in files:
+        file_path = os.path.join(target_dir, file)
+        out_path = os.path.join(target_dir, file[:-7] + '_regsegm_py.nii.gz')
+        if file.endswith(file_ending) and (not '_regsegm' in file) and (not os.path.isfile(out_path)):
+            print('Processing "' + file + '"')
+
+            ct_reg_segm(file_path, lungs_proj_filename, resized_data_dir, reg_dir, reg_files_storage)
 
     print('FINISHED')
 
 
 if __name__ == '__main__':
-    process_dir()
+    dir_with_nii = 'test_images'
+    process_dir(dir_with_nii)
