@@ -23,7 +23,7 @@ The tool can be downloaded from the website (http://elastix.isi.uu.nl/)
 or installed on Unix systems via: 
    
 ```
-sudo apt install elasix
+sudo apt install elastix
 ```
 
 * Download the __[CT_RegSegm_data.tar](https://drive.google.com/open?id=1x6nM5Z4_o8S_7DInp2rgqCwFoxrcMLpb)__
