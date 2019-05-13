@@ -37,6 +37,7 @@ or from command line using [run_regsegm.py](run_regsegm.py) script. Examples:
 
 ```
 python3 run_regsegm.py test_data/test_image.nii.gz
+python3 run_regsegm.py test_data/dir_with_images
 ```
 
 If succeeded, the `*_regsegm_py.nii.gz` files containing the lung masks should appear.
