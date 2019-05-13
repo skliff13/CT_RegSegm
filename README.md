@@ -26,7 +26,7 @@ or installed on Unix systems via:
 sudo apt install elastix
 ```
 
-* Download the __[CT_RegSegm_data.tar](https://drive.google.com/open?id=1x6nM5Z4_o8S_7DInp2rgqCwFoxrcMLpb)__
+* Download the __[CT_RegSegm_data.tar](https://drive.google.com/open?id=1x6nM5Z4_o8S_7DInp2rgqCwFoxrcMLpb) (289 MB)__
 archive and extract its content (`resized_data` and `test_data`) 
 into the repository root directory.  
 
