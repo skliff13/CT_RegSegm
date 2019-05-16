@@ -40,7 +40,7 @@ python3 run_regsegm.py test_data/test_image.nii.gz
 python3 run_regsegm.py test_data/dir_with_images
 ```
 
-If succeeded, the `*_regsegm_py.nii.gz` files containing the lung masks should appear.
+If succeeded, the `*_regsegm_py.nii.gz` files containing the lung masks should appear next to the original files.
 
 Result examples:
 
