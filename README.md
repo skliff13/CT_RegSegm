@@ -1,7 +1,7 @@
 # CT_RegSegm
 Segmentation of lungs in 3D Computed Tomography (CT) scans via non-rigid image registration scheme [\[1\]](#references).
 
-Short description of the current implementation can be found in [\[2\]](#references) (please consider citing if using the implementation).
+Short description of the current implementation can be found in [\[2\]](#references) (please consider citing if using this implementation).
 
 ### Requirements
 
