@@ -24,8 +24,8 @@ def main():
         msk_path = os.path.join(dir_segmented, 'id%03i_resegm2.nii.gz' % i)
 
         print('Reading ' + img_path)
-        img = reg.advAnalyzeNiiRead(img_path)[0]
-        img = reg.makeUint8(img)
+        img = reg.adv_analyze_nii_read(img_path)[0]
+        img = reg.make_uint8(img)
         img = img[::rs, ::rs, :]
 
         out_path = os.path.join(out_dir, 'id%03i_img.npz' % i)
@@ -33,8 +33,8 @@ def main():
         np.savez_compressed(out_path, img)
 
         print('Reading ' + msk_path)
-        msk = reg.advAnalyzeNiiRead(msk_path)[0]
-        msk = reg.makeUint8(msk)
+        msk = reg.adv_analyze_nii_read(msk_path)[0]
+        msk = reg.make_uint8(msk)
         msk[msk > 0] = pos_val
         msk[msk == 0] = 0
         msk = msk[::rs, ::rs, :]

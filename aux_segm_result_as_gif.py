@@ -15,9 +15,9 @@ if __name__ == '__main__':
     out_path = 'result1.gif'
     msk_path = img_path.replace('.nii.gz', '_regsegm_py.nii.gz')
 
-    img = reg.advAnalyzeNiiRead(img_path)[0]
+    img = reg.adv_analyze_nii_read(img_path)[0]
     img[img < 0] = 0
-    msk = reg.advAnalyzeNiiRead(msk_path)[0]
+    msk = reg.adv_analyze_nii_read(msk_path)[0]
 
     ground = msk.min()
 

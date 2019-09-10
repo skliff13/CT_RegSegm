@@ -30,52 +30,52 @@ class CtRegSegmentor():
         with open('config.json', 'r') as f:
             config = json.load(f)
 
-        nsim = config['num_nearest']
-        rs = config['slice_resize']
-        posval = config['positive_value']
+        num_nearest = config['num_nearest']
+        resz = config['slice_resize']
+        pos_val = config['positive_value']
 
         logmess(self.reg_dir, 'Reading lung projections from ' + self.lungs_proj_filename)
         df = pd.read_csv(self.lungs_proj_filename, header=None)
-        lprojs = df.get_values()
-        xyzbs = lprojs[:, 300:306]
-        lprojs = lprojs[:, 0:300]
+        data = df.get_values()
+        xyz_bounds = data[:, 300:306]
+        lung_projs = data[:, 0:300]
 
         self.log('Reading 3D image from ' + file_path)
-        im, pxdim, affine = reg.advAnalyzeNiiRead(file_path)
+        im, voxel_dimensions, affine = reg.adv_analyze_nii_read(file_path)
 
         self.log('Coarse extraction of lungs')
-        lng = reg.catchLungs(im, pxdim)
+        lungs = reg.catch_lungs(im, voxel_dimensions)
         self.log('Calculating lung projections')
-        proj, xyzb = reg.lungproj(lng, pxdim)
+        projections, bounds = reg.calculate_lung_projections(lungs, voxel_dimensions)
 
-        ds = distance_matrix(proj, lprojs).flatten()
-        idx = np.argsort(ds)
-        if ds[idx[0]] < 0.001:
-            ids = idx[1:nsim + 1] + 1
+        distances = distance_matrix(projections, lung_projs).flatten()
+        idx = np.argsort(distances)
+        if distances[idx[0]] < 0.001:
+            ids = idx[1:num_nearest + 1] + 1
         else:
-            ids = idx[0:nsim] + 1
+            ids = idx[0:num_nearest] + 1
 
-        fixed = reg.makeUint8(im[::rs, ::rs, :]).copy()
+        fixed = reg.make_uint8(im[::resz, ::resz, :]).copy()
         mean_mask = (fixed * 0).astype(np.float32)
-        for j in range(nsim):
-            xyzb1 = xyzbs[ids[j] - 1, :]
+        for j in range(num_nearest):
+            bounds_moving = xyz_bounds[ids[j] - 1, :]
 
             path = os.path.join(self.resized_data_dir, 'id%03i_img.npz' % ids[j])
             self.log('Similar image #%i: Reading image from %s' % (j + 1, path))
             data = np.load(path)
             moving = data[data.files[0]]
-            moving = self.shift3(moving, fixed.shape, xyzb1 // rs, xyzb // rs).astype(np.uint8)
+            moving = self.shift3(moving, fixed.shape, bounds_moving // resz, bounds // resz).astype(np.uint8)
 
             path = os.path.join(self.resized_data_dir, 'id%03i_msk.npz' % ids[j])
             self.log('Similar image #%i: Reading mask from %s' % (j + 1, path))
             data = np.load(path)
             mask = data[data.files[0]]
-            mask = self.shift3(mask, fixed.shape, xyzb1 // rs, xyzb // rs).astype(np.uint8)
+            mask = self.shift3(mask, fixed.shape, bounds_moving // resz, bounds // resz).astype(np.uint8)
 
             self.log('Similar image #%i: Registration' % (j + 1))
             moved_mask = reg.register3d(moving, fixed, mask, self.reg_dir)
 
-            mean_mask += moved_mask.astype(np.float32) / posval / nsim
+            mean_mask += moved_mask.astype(np.float32) / pos_val / num_nearest
 
         self.log('Resizing procedures')
         mean_mask[mean_mask < 0.5] = 0
@@ -104,7 +104,7 @@ class CtRegSegmentor():
             file_path = os.path.join(dir_path, file)
             out_path = os.path.join(dir_path, file[:-7] + '_regsegm_py.nii.gz')
 
-            if file.endswith(file_ending) and (not '_regsegm' in file):
+            if file.endswith(file_ending) and '_regsegm' not in file:
                 if os.path.isfile(out_path):
                     print('File ' + out_path + ' already exists. Skipping.')
                 else:
@@ -149,7 +149,7 @@ class CtRegSegmentor():
             if strt + n + im.shape[0] - trange[1] <= im1.shape[0]:
                 im[trange[1]:im.shape[0], :, :] = im1[strt + n:strt + n + im.shape[0] - trange[1], :, :]
             else:
-                im[trange[1]:trange[1]+ im1.shape[0] - strt - n, :, :] = im1[strt + n:im1.shape[0], :, :]
+                im[trange[1]:trange[1] + im1.shape[0] - strt - n, :, :] = im1[strt + n:im1.shape[0], :, :]
 
             im = np.swapaxes(im, 0, 1)
             im = np.swapaxes(im, 1, 2)

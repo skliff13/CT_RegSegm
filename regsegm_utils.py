@@ -7,18 +7,18 @@ from scipy.ndimage.morphology import binary_dilation
 from regsegm_logging import logmess
 
 
-def imresize(m, newshape, order=1, mode='constant'):
-    dtype = m.dtype
+def imresize(m, new_shape, order=1, mode='constant'):
+    data_type = m.dtype
 
-    mult = np.max(np.abs(m)) * 2
-    m = m.astype(np.float32) / mult
-    m = transform.resize(m, newshape, order=order, mode=mode)
-    m = m * mult
+    multiplier = np.max(np.abs(m)) * 2
+    m = m.astype(np.float32) / multiplier
+    m = transform.resize(m, new_shape, order=order, mode=mode)
+    m = m * multiplier
 
-    return m.astype(dtype=dtype)
+    return m.astype(dtype=data_type)
 
 
-def writeMHD(filename, im, datatype):
+def write_mhd(filename, im, data_type):
     with open(filename + '.mhd', 'w') as f:
         f.write('ObjectType = Image\nNDims = %i\nBinaryData = True\n' % len(im.shape))
 
@@ -26,20 +26,20 @@ def writeMHD(filename, im, datatype):
         f.write('BinaryDataByteOrderMSB = False\nDimSize = %s\n' % s)
 
         fn = filename.split('/')[-1] + '.raw'
-        f.write('ElementType = MET_%s\nElementDataFile = %s' % (datatype.upper(), fn))
+        f.write('ElementType = MET_%s\nElementDataFile = %s' % (data_type.upper(), fn))
 
     im = np.swapaxes(im, 0, 2).copy()
     im.tofile(filename + '.raw')
 
 
-def readMHD_simple(filename, shape):
+def read_mhd_simple(filename, shape):
     arr = np.fromfile(filename + '.raw', dtype=np.uint8)
     arr = np.reshape(arr, shape[::-1])
     im = np.swapaxes(arr, 0, 2).copy()
     return im
 
 
-def changeTransformParametersFile(oldfile, newfile):
+def change_transform_parameters_file(oldfile, newfile):
     with open(oldfile, 'rt') as f1:
         lines = f1.readlines()
 
@@ -51,47 +51,47 @@ def changeTransformParametersFile(oldfile, newfile):
             f2.write(line)
 
 
-def register3d(mov, fxd, movmsk, outDir):
-    writeMHD(outDir + '/moving', mov, 'char')
-    writeMHD(outDir + '/fixed', fxd, 'char')
+def register3d(mov, fxd, moving_mask, out_dir):
+    write_mhd(out_dir + '/moving', mov, 'char')
+    write_mhd(out_dir + '/fixed', fxd, 'char')
 
-    cmd = 'elastix -f {0}/fixed.mhd -m {0}/moving.mhd -out {0} -p {0}/parameters_BSpline.txt'.format(outDir)
-    logmess(outDir, cmd)
+    cmd = 'elastix -f {0}/fixed.mhd -m {0}/moving.mhd -out {0} -p {0}/parameters_BSpline.txt'.format(out_dir)
+    logmess(out_dir, cmd)
     os.system(cmd)
 
-    changeTransformParametersFile(outDir + '/TransformParameters.0.txt', outDir + '/FinalTransformParameters.txt')
+    change_transform_parameters_file(out_dir + '/TransformParameters.0.txt', out_dir + '/FinalTransformParameters.txt')
 
-    writeMHD(outDir + '/mask_moving', movmsk, 'char')
-    cmd = 'transformix -in {0}/mask_moving.mhd -out {0} -tp {0}/FinalTransformParameters.txt'.format(outDir)
-    logmess(outDir, cmd)
+    write_mhd(out_dir + '/mask_moving', moving_mask, 'char')
+    cmd = 'transformix -in {0}/mask_moving.mhd -out {0} -tp {0}/FinalTransformParameters.txt'.format(out_dir)
+    logmess(out_dir, cmd)
     os.system(cmd)
 
-    movedmsk = readMHD_simple(outDir + '/result', mov.shape)
+    moved_mask = read_mhd_simple(out_dir + '/result', mov.shape)
 
-    return movedmsk
+    return moved_mask
 
 
-def advAnalyzeNiiRead(fn):
+def adv_analyze_nii_read(fn):
     im = nb.load(fn)
     afn = im.affine
     im = im.get_data() + 1024
     im = np.swapaxes(im, 0, 1)
     im = im[:, ::-1, :]
-    pxdim = np.abs(np.diag(afn[:3, :3]))
+    voxel_dimensions = np.abs(np.diag(afn[:3, :3]))
 
-    if pxdim[2] < 1.5:
+    if voxel_dimensions[2] < 1.5:
         im = im[:, :, ::2].copy()
-        pxdim[2] *= 2
-    elif pxdim[2] > 3:
-        newsz = (im.shape[0], im.shape[1], im.shape[2] * 2)
-        im = imresize(im, newsz, order=0)
-        pxdim[2] /= 2
+        voxel_dimensions[2] *= 2
+    elif voxel_dimensions[2] > 3:
+        new_size = (im.shape[0], im.shape[1], im.shape[2] * 2)
+        im = imresize(im, new_size, order=0)
+        voxel_dimensions[2] /= 2
 
-    return im, pxdim, afn
+    return im, voxel_dimensions, afn
 
 
-def catchLungs(im3, pxdim):
-    d3 = int(round(2.5 / pxdim[2]))
+def catch_lungs(im3, voxel_dimensions):
+    d3 = int(round(2.5 / voxel_dimensions[2]))
     sml = im3[::4, ::4, ::d3]
     sbw = sml > 700
     se = np.ones((3, 3, 3), dtype=bool)
@@ -99,7 +99,7 @@ def catchLungs(im3, pxdim):
 
     sbw = np.invert(sbw).astype(int)
     lbl = measure.label(sbw)
-    nlbl = np.max(lbl)
+    num_labels = np.max(lbl)
     for i in range(2):
         for j in range(2):
             for k in range(2):
@@ -107,7 +107,7 @@ def catchLungs(im3, pxdim):
                 l = lbl[i * (s[0] - 1), j * (s[1] - 1), k * (s[2] - 1)]
                 lbl[lbl == l] = 0
 
-    for i in range(nlbl):
+    for i in range(num_labels):
         if np.sum(lbl == i) < 100:
             lbl[lbl == i] = 0
 
@@ -115,43 +115,43 @@ def catchLungs(im3, pxdim):
     return lung
 
 
-def trimProjection(proj):
-    cumsum = np.cumsum(proj.astype(np.float) / np.sum(proj))
+def trim_projection(projection):
+    cumsum = np.cumsum(projection.astype(np.float) / np.sum(projection))
 
     d = 3
     i1 = np.where(cumsum > 0.01)[0][0] - d
     i2 = np.where(cumsum < 0.99)[0][-1] + d
-    bounds = (max((0, i1)), min((len(proj), i2 + 2)))
-    proj = proj[bounds[0]:bounds[1]]
+    bounds = (max((0, i1)), min((len(projection), i2 + 2)))
+    projection = projection[bounds[0]:bounds[1]]
 
-    proj = np.asarray([proj])
-    proj = imresize(proj, (1, 100))
-    proj = proj.astype(np.float32) / proj.sum()
+    projection = np.asarray([projection])
+    projection = imresize(projection, (1, 100))
+    projection = projection.astype(np.float32) / projection.sum()
 
-    return proj, np.asarray(bounds)
+    return projection, np.asarray(bounds)
 
 
-def lungproj(lung, pxdim):
-    xproj = np.sum(lung, axis=(0, 2)).flatten()
-    yproj = np.sum(lung, axis=(1, 2)).flatten()
-    zproj = np.sum(lung, axis=(0, 1)).flatten()
+def calculate_lung_projections(lung, voxel_dimensions):
+    x_proj = np.sum(lung, axis=(0, 2)).flatten()
+    y_proj = np.sum(lung, axis=(1, 2)).flatten()
+    z_proj = np.sum(lung, axis=(0, 1)).flatten()
 
-    xproj, xb = trimProjection(xproj)
-    yproj, yb = trimProjection(yproj)
-    zproj, zb = trimProjection(zproj)
+    x_proj, xb = trim_projection(x_proj)
+    y_proj, yb = trim_projection(y_proj)
+    z_proj, zb = trim_projection(z_proj)
 
-    proj = np.append(xproj, (yproj, zproj))
-    proj[proj < 0] = 0
-    d3 = int(round(2.5 / pxdim[2]))
+    projections = np.append(x_proj, (y_proj, z_proj))
+    projections[projections < 0] = 0
+    d3 = int(round(2.5 / voxel_dimensions[2]))
     mlt = (8, 8, (2 * d3))
 
-    xyzb = np.append(xb * mlt[0], (yb * mlt[1], zb * mlt[2]))
+    xyz_bounds = np.append(xb * mlt[0], (yb * mlt[1], zb * mlt[2]))
 
-    proj = np.asarray([proj])
-    return proj, xyzb
+    projections = np.asarray([projections])
+    return projections, xyz_bounds
 
 
-def makeUint8(im):
+def make_uint8(im):
     im = im * 0.17
     im[im < 0] = 0
     im[im > 255] = 255

@@ -4,10 +4,10 @@ import regsegm_utils as reg
 
 
 def save_lungproj(filename):
-    im, pxdim, affine = reg.advAnalyzeNiiRead(filename)
+    im, pxdim, affine = reg.adv_analyze_nii_read(filename)
 
-    lng = reg.catchLungs(im, pxdim)
-    proj, xyzb = reg.lungproj(lng, pxdim)
+    lng = reg.catch_lungs(im, pxdim)
+    proj, xyzb = reg.calculate_lung_projections(lng, pxdim)
 
     result = np.append(proj, xyzb)
     result = np.asarray([result])
