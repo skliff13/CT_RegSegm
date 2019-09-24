@@ -78,6 +78,7 @@ def adv_analyze_nii_read(fn):
     im = np.swapaxes(im, 0, 1)
     im = im[:, ::-1, :]
     voxel_dimensions = np.abs(np.diag(afn[:3, :3]))
+    shape0 = im.shape
 
     if voxel_dimensions[2] < 1.5:
         im = im[:, :, ::2].copy()
@@ -87,7 +88,7 @@ def adv_analyze_nii_read(fn):
         im = imresize(im, new_size, order=0)
         voxel_dimensions[2] /= 2
 
-    return im, voxel_dimensions, afn
+    return im, voxel_dimensions, afn, shape0
 
 
 def catch_lungs(im3, voxel_dimensions):

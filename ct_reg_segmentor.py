@@ -42,7 +42,7 @@ class CtRegSegmentor():
         lung_projs = data[:, 0:300]
 
         self.log('Reading 3D image from ' + file_path)
-        im, voxel_dimensions, affine = reg.adv_analyze_nii_read(file_path)
+        im, voxel_dimensions, affine, shape0 = reg.adv_analyze_nii_read(file_path)
 
         self.log('Coarse extraction of lungs')
         lungs = reg.catch_lungs(im, voxel_dimensions)
@@ -84,7 +84,7 @@ class CtRegSegmentor():
         mean_mask = mean_mask[:, ::-1, :]
         mean_mask = np.swapaxes(mean_mask, 0, 1)
 
-        mean_mask = reg.imresize(mean_mask, im.shape, order=0)
+        mean_mask = reg.imresize(mean_mask, shape0, order=0)
         mean_mask = mean_mask.astype(np.int16)
         affine = np.abs(affine) * np.eye(4, 4)
         affine[1, 1] = -affine[1, 1]

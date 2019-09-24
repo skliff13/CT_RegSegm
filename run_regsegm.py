@@ -20,7 +20,7 @@ if __name__ == '__main__':
         if path.lower().endswith('.nii.gz'):
             print('Processing file ' + path + '\n')
 
-            rs.process_file('test_data/test_image.nii.gz')
+            rs.process_file(path)
         else:
             print('\nOnly .NII.GZ files are supported\n')
     else:
