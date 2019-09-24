@@ -1,6 +1,7 @@
 import os
 import json
 import shutil
+import traceback
 import pandas as pd
 import numpy as np
 import nibabel as nb
@@ -100,6 +101,9 @@ class CtRegSegmentor():
         file_ending = '.nii.gz'
         files = os.listdir(dir_path)
 
+        skipped = 0
+        processed = 0
+        failed = 0
         for file in files:
             file_path = os.path.join(dir_path, file)
             out_path = os.path.join(dir_path, file[:-7] + '_regsegm_py.nii.gz')
@@ -107,9 +111,19 @@ class CtRegSegmentor():
             if file.endswith(file_ending) and '_regsegm' not in file:
                 if os.path.isfile(out_path):
                     print('File ' + out_path + ' already exists. Skipping.')
+                    skipped += 1
                 else:
                     print('Processing "' + file + '"')
-                    self.process_file(file_path)
+                    try:
+                        self.process_file(file_path)
+                        processed += 1
+                    except:
+                        print('*** FAILED to process files "' + file + '"')
+                        failed += 1
+                        traceback.print_exc()
+
+        print('Finished processing images in ' + dir_path)
+        print('Skipped: %i\nProcessed: %i\nFailed: %i' % (skipped, processed, failed))
 
     def log(self, message=None):
         if message is None:
