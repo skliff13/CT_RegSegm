@@ -48,6 +48,7 @@ class CtRegSegmentor():
             file_path: Path to the input file
 
         """
+
         os.makedirs(self.reg_dir, exist_ok=True)
 
         logmess(self.reg_dir)
@@ -132,7 +133,7 @@ class CtRegSegmentor():
             # Arguments
                 dir_path: Path to the directory with Nifti images.
 
-            """
+        """
 
         file_ending = '.nii.gz'
         files = os.listdir(dir_path)
