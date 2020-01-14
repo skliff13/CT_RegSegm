@@ -39,15 +39,15 @@ def read_mhd_simple(filename, shape):
     return im
 
 
-def change_transform_parameters_file(oldfile, newfile):
-    with open(oldfile, 'rt') as f1:
+def change_transform_parameters_file(old_file, new_file):
+    with open(old_file, 'rt') as f1:
         lines = f1.readlines()
 
-    toFind = '(FinalBSplineInterpolationOrder'
-    with open(newfile, 'wt') as f2:
+    to_find = '(FinalBSplineInterpolationOrder'
+    with open(new_file, 'wt') as f2:
         for line in lines:
-            if toFind in line:
-                line = toFind + ' 0)\n'
+            if to_find in line:
+                line = to_find + ' 0)\n'
             f2.write(line)
 
 

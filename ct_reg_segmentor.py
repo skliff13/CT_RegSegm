@@ -6,47 +6,73 @@ import pandas as pd
 import numpy as np
 import nibabel as nb
 from scipy.spatial import distance_matrix
+from scipy.ndimage import gaussian_filter
 import regsegm_utils as reg
 from regsegm_logging import logmess
 
 
 class CtRegSegmentor():
-    def __init__(self, resized_data_dir='resized_data',
+    """Creates an instance of CtRegSegmentor class which can be used for segmentation of lung regions in 3D Computed
+    Tomography (CT) images of chest.
+
+    # Arguments
+        config_file_path: Path to JSON configuration file. Defaults to 'config.json'
+        resized_data_dir: Path to directory with the resized image data (id*_img.npz files). Defaults to 'resized_data'
+        reg_dir: Path to the directory which will be created for storing the temporary files.
+            Defaults to 'registration_py'
+        reg_files_storage: Path to directory with files storing the 'elastix' parameters. Defaults to 'regFiles'
+        lungs_proj_file_path: Path to the file with projections information. Defaults to 'lungproj_xyzb_130_py.txt'.
+
+    # Examples
+    `.process_file('test_data/test_image.nii.gz')`
+    `.process_dir('test_data/dir_with_images')`
+
+    """
+
+    def __init__(self, config_file_path='config.json',
+                 resized_data_dir='resized_data',
                  reg_dir='registration_py',
                  reg_files_storage='regFiles',
-                 lungs_proj_filename='lungproj_xyzb_130_py.txt'):
+                 lungs_proj_file_path='lungproj_xyzb_130_py.txt'):
 
+        self.config_file_path = config_file_path
         self.resized_data_dir = resized_data_dir
         self.reg_dir = reg_dir
         self.reg_files_storage = reg_files_storage
-        self.lungs_proj_filename = lungs_proj_filename
+        self.lungs_proj_file_path = lungs_proj_file_path
 
     def process_file(self, file_path):
+        """Reads a Nifti image, performs segmentation of lungs and saves the result into '*_regsegm.nii.gz' file.
+
+        # Arguments
+            file_path: Path to the input file
+
+        """
         os.makedirs(self.reg_dir, exist_ok=True)
 
         logmess(self.reg_dir)
 
-        self.copy_files_from_storage()
+        self._copy_files_from_storage()
 
-        with open('config.json', 'r') as f:
+        with open(self.config_file_path, 'r') as f:
             config = json.load(f)
 
         num_nearest = config['num_nearest']
         resz = config['slice_resize']
         pos_val = config['positive_value']
 
-        logmess(self.reg_dir, 'Reading lung projections from ' + self.lungs_proj_filename)
-        df = pd.read_csv(self.lungs_proj_filename, header=None)
+        logmess(self.reg_dir, 'Reading lung projections from ' + self.lungs_proj_file_path)
+        df = pd.read_csv(self.lungs_proj_file_path, header=None)
         data = df.get_values()
         xyz_bounds = data[:, 300:306]
         lung_projs = data[:, 0:300]
 
-        self.log('Reading 3D image from ' + file_path)
+        self._log('Reading 3D image from ' + file_path)
         im, voxel_dimensions, affine, shape0 = reg.adv_analyze_nii_read(file_path)
 
-        self.log('Coarse extraction of lungs')
+        self._log('Coarse extraction of lungs')
         lungs = reg.catch_lungs(im, voxel_dimensions)
-        self.log('Calculating lung projections')
+        self._log('Calculating lung projections')
         projections, bounds = reg.calculate_lung_projections(lungs, voxel_dimensions)
 
         distances = distance_matrix(projections, lung_projs).flatten()
@@ -62,29 +88,31 @@ class CtRegSegmentor():
             bounds_moving = xyz_bounds[ids[j] - 1, :]
 
             path = os.path.join(self.resized_data_dir, 'id%03i_img.npz' % ids[j])
-            self.log('Similar image #%i: Reading image from %s' % (j + 1, path))
+            self._log('Similar image #%i: Reading image from %s' % (j + 1, path))
             data = np.load(path)
             moving = data[data.files[0]]
-            moving = self.shift3(moving, fixed.shape, bounds_moving // resz, bounds // resz).astype(np.uint8)
+            moving = self._shift3(moving, fixed.shape, bounds_moving // resz, bounds // resz).astype(np.uint8)
 
             path = os.path.join(self.resized_data_dir, 'id%03i_msk.npz' % ids[j])
-            self.log('Similar image #%i: Reading mask from %s' % (j + 1, path))
+            self._log('Similar image #%i: Reading mask from %s' % (j + 1, path))
             data = np.load(path)
             mask = data[data.files[0]]
-            mask = self.shift3(mask, fixed.shape, bounds_moving // resz, bounds // resz).astype(np.uint8)
+            mask = self._shift3(mask, fixed.shape, bounds_moving // resz, bounds // resz).astype(np.uint8)
 
-            self.log('Similar image #%i: Registration' % (j + 1))
+            self._log('Similar image #%i: Registration' % (j + 1))
             moved_mask = reg.register3d(moving, fixed, mask, self.reg_dir)
 
             mean_mask += moved_mask.astype(np.float32) / pos_val / num_nearest
 
-        self.log('Resizing procedures')
-        mean_mask[mean_mask < 0.5] = 0
-        mean_mask[mean_mask >= 0.5] = 1
+        self._log('Resizing procedures')
         mean_mask = mean_mask[:, ::-1, :]
         mean_mask = np.swapaxes(mean_mask, 0, 1)
 
-        mean_mask = reg.imresize(mean_mask, shape0, order=0)
+        mean_mask = reg.imresize(mean_mask, shape0, order=1)
+        if config['smooth_sigma'] > 0:
+            z_sigma = config['smooth_sigma'] * voxel_dimensions[2] / voxel_dimensions[1]
+            mean_mask = gaussian_filter(mean_mask, (1, 1, z_sigma))
+        mean_mask = np.array(mean_mask > 0.5)
         mean_mask = mean_mask.astype(np.int16)
         affine = np.abs(affine) * np.eye(4, 4)
         affine[1, 1] = -affine[1, 1]
@@ -92,12 +120,20 @@ class CtRegSegmentor():
         nii = nb.Nifti1Image(mean_mask, affine)
 
         fno = file_path[:-7] + '_regsegm_py.nii.gz'
-        self.log('Saving result to ' + fno)
+        self._log('Saving result to ' + fno)
         nb.save(nii, fno)
 
         return 0
 
     def process_dir(self, dir_path):
+        """Reads Nifti (*.nii.gz) images from the specified directory, performs segmentation of lungs and saves the results
+        into '*_regsegm.nii.gz' files.
+
+            # Arguments
+                dir_path: Path to the directory with Nifti images.
+
+            """
+
         file_ending = '.nii.gz'
         files = os.listdir(dir_path)
 
@@ -125,14 +161,14 @@ class CtRegSegmentor():
         print('Finished processing images in ' + dir_path)
         print('Skipped: %i\nProcessed: %i\nFailed: %i' % (skipped, processed, failed))
 
-    def log(self, message=None):
+    def _log(self, message=None):
         if message is None:
             logmess(self.reg_dir)
         else:
             logmess(self.reg_dir, message)
 
     @staticmethod
-    def shift3(im, sz, xyzsrc, xyztrg):
+    def _shift3(im, sz, xyzsrc, xyztrg):
         mult = 1.0e-5
         im = im.astype(np.float32) * mult
 
@@ -178,7 +214,7 @@ class CtRegSegmentor():
         im = im / mult
         return im
 
-    def copy_files_from_storage(self):
+    def _copy_files_from_storage(self):
         logmess(self.reg_dir, 'Copying files from ' + self.reg_files_storage)
 
         files = os.listdir(self.reg_files_storage + '/')
@@ -187,3 +223,8 @@ class CtRegSegmentor():
                 src = os.path.join(self.reg_files_storage, file)
                 dst = os.path.join(self.reg_dir, file)
                 shutil.copyfile(src, dst)
+
+
+if __name__ == '__main__':
+    print('Testing CtRegSegmentor')
+    CtRegSegmentor().process_file('test_data/test_image.nii.gz')

@@ -1,5 +1,6 @@
 {
   "slice_resize": 4,
   "positive_value": 200,
-  "num_nearest": 5
+  "num_nearest": 5,
+  "smooth_sigma": 1
 }
