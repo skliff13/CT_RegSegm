@@ -91,6 +91,18 @@ def adv_analyze_nii_read(fn):
     return im, voxel_dimensions, afn, shape0
 
 
+def save_as_nii(img, affine, out_path):
+    img = img.astype(np.int16)
+    img = img[:, ::-1, :]
+    img = np.swapaxes(img, 0, 1)
+
+    affine = np.abs(affine) * np.eye(4, 4)
+    affine[1, 1] = -affine[1, 1]
+    affine[0, 0] = -affine[0, 0]
+    nii = nb.Nifti1Image(img, affine)
+    nb.save(nii, out_path)
+
+
 def catch_lungs(im3, voxel_dimensions):
     d3 = int(round(2.5 / voxel_dimensions[2]))
     sml = im3[::4, ::4, ::d3]

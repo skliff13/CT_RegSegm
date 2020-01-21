@@ -4,7 +4,6 @@ import shutil
 import traceback
 import pandas as pd
 import numpy as np
-import nibabel as nb
 from scipy.spatial import distance_matrix
 from scipy.ndimage import gaussian_filter
 import regsegm_utils as reg
@@ -16,12 +15,14 @@ class CtRegSegmentor():
     Tomography (CT) images of chest.
 
     # Arguments
-        config_file_path: Path to JSON configuration file. Defaults to 'config.json'
-        resized_data_dir: Path to directory with the resized image data (id*_img.npz files). Defaults to 'resized_data'
-        reg_dir: Path to the directory which will be created for storing the temporary files.
+        config_file_path: (str) Path to JSON configuration file. Defaults to 'config.json'
+        resized_data_dir: (str) Path to directory with the resized image data (id*_img.npz files).
+            Defaults to 'resized_data'
+        reg_dir: (str) Path to the directory which will be created for storing the temporary files.
             Defaults to 'registration_py'
-        reg_files_storage: Path to directory with files storing the 'elastix' parameters. Defaults to 'regFiles'
-        lungs_proj_file_path: Path to the file with projections information. Defaults to 'lungproj_xyzb_130_py.txt'.
+        reg_files_storage: (str) Path to directory with files storing the 'elastix' parameters. Defaults to 'regFiles'
+        lungs_proj_file_path: (str) Path to the file with projections information.
+            Defaults to 'lungproj_xyzb_130_py.txt'.
 
     # Examples
     `.process_file('test_data/test_image.nii.gz')`
@@ -45,7 +46,7 @@ class CtRegSegmentor():
         """Reads a Nifti image, performs segmentation of lungs and saves the result into '*_regsegm.nii.gz' file.
 
         # Arguments
-            file_path: Path to the input file
+            file_path: (str) Path to the input file
 
         """
 
@@ -106,23 +107,15 @@ class CtRegSegmentor():
             mean_mask += moved_mask.astype(np.float32) / pos_val / num_nearest
 
         self._log('Resizing procedures')
-        mean_mask = mean_mask[:, ::-1, :]
-        mean_mask = np.swapaxes(mean_mask, 0, 1)
-
         mean_mask = reg.imresize(mean_mask, shape0, order=1)
         if config['smooth_sigma'] > 0:
             z_sigma = config['smooth_sigma'] * voxel_dimensions[2] / voxel_dimensions[1]
             mean_mask = gaussian_filter(mean_mask, (1, 1, z_sigma))
         mean_mask = np.array(mean_mask > 0.5)
-        mean_mask = mean_mask.astype(np.int16)
-        affine = np.abs(affine) * np.eye(4, 4)
-        affine[1, 1] = -affine[1, 1]
-        affine[0, 0] = -affine[0, 0]
-        nii = nb.Nifti1Image(mean_mask, affine)
 
-        fno = file_path[:-7] + '_regsegm_py.nii.gz'
-        self._log('Saving result to ' + fno)
-        nb.save(nii, fno)
+        out_path = file_path[:-7] + '_regsegm_py.nii.gz'
+        self._log('Saving result to ' + out_path)
+        reg.save_as_nii(mean_mask, affine, out_path)
 
         return 0
 
@@ -131,7 +124,7 @@ class CtRegSegmentor():
         into '*_regsegm.nii.gz' files.
 
             # Arguments
-                dir_path: Path to the directory with Nifti images.
+                dir_path: (str) Path to the directory with Nifti images.
 
         """
 
