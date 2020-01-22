@@ -12,3 +12,4 @@ __pycache__/
 #### User files and folders
 registration_py/
 *.nii.gz
+tmp*
