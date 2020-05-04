@@ -65,7 +65,7 @@ class CtRegSegmentor():
 
         logmess(self.reg_dir, 'Reading lung projections from ' + self.lungs_proj_file_path)
         df = pd.read_csv(self.lungs_proj_file_path, header=None)
-        data = df.get_values()
+        data = np.asarray(df)
         xyz_bounds = data[:, 300:306]
         lung_projs = data[:, 0:300]
 
