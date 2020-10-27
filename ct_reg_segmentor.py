@@ -20,7 +20,9 @@ class CtRegSegmentor():
             Defaults to 'resized_data'
         reg_dir: (str) Path to the directory which will be created for storing the temporary files.
             Defaults to 'registration_py'
-        reg_files_storage: (str) Path to directory with files storing the 'elastix' parameters. Defaults to 'regFiles'
+        reg_files_storage: (str) Path to directory with files storing the 'elastix' parameters. Defaults to 'regFiles'.
+        swap_x: (bool): Whether to swap X axis at input and output. Defaults to False.
+        swap_y: (bool): Whether to swap Y axis at input and output. Defaults to False.
         lungs_proj_file_path: (str) Path to the file with projections information.
             Defaults to 'lungproj_xyzb_130_py.txt'.
 
@@ -34,12 +36,15 @@ class CtRegSegmentor():
                  resized_data_dir='resized_data',
                  reg_dir='registration_py',
                  reg_files_storage='regFiles',
+                 swap_x=False, swap_y=False,
                  lungs_proj_file_path='lungproj_xyzb_130_py.txt'):
 
         self.config_file_path = config_file_path
         self.resized_data_dir = resized_data_dir
         self.reg_dir = reg_dir
         self.reg_files_storage = reg_files_storage
+        self.swap_x = swap_x
+        self.swap_y = swap_y
         self.lungs_proj_file_path = lungs_proj_file_path
 
     def process_file(self, file_path):
@@ -70,12 +75,12 @@ class CtRegSegmentor():
         lung_projs = data[:, 0:300]
 
         self._log('Reading 3D image from ' + file_path)
-        im, voxel_dimensions, affine, shape0 = reg.adv_analyze_nii_read(file_path)
+        im, vox_dim, affine, shape0 = reg.adv_analyze_nii_read(file_path, swap_x=self.swap_x, swap_y=self.swap_y)
 
         self._log('Coarse extraction of lungs')
-        lungs = reg.catch_lungs(im, voxel_dimensions)
+        lungs = reg.catch_lungs(im, vox_dim)
         self._log('Calculating lung projections')
-        projections, bounds = reg.calculate_lung_projections(lungs, voxel_dimensions)
+        projections, bounds = reg.calculate_lung_projections(lungs, vox_dim)
 
         distances = distance_matrix(projections, lung_projs).flatten()
         idx = np.argsort(distances)
@@ -109,13 +114,13 @@ class CtRegSegmentor():
         self._log('Resizing procedures')
         mean_mask = reg.imresize(mean_mask, shape0, order=1)
         if config['smooth_sigma'] > 0:
-            z_sigma = config['smooth_sigma'] * voxel_dimensions[2] / voxel_dimensions[1]
+            z_sigma = config['smooth_sigma'] * vox_dim[2] / vox_dim[1]
             mean_mask = gaussian_filter(mean_mask, (1, 1, z_sigma))
         mean_mask = np.array(mean_mask > 0.5)
 
         out_path = file_path[:-7] + '_regsegm_py.nii.gz'
         self._log('Saving result to ' + out_path)
-        reg.save_as_nii(mean_mask, affine, out_path)
+        reg.save_as_nii(mean_mask, affine, out_path, swap_x=self.swap_x, swap_y=self.swap_y)
 
         return 0
 

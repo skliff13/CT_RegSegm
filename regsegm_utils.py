@@ -71,29 +71,35 @@ def register3d(mov, fxd, moving_mask, out_dir):
     return moved_mask
 
 
-def adv_analyze_nii_read(fn):
-    im = nb.load(fn)
-    afn = im.affine
-    im = im.get_data() + 1024
-    im = np.swapaxes(im, 0, 1)
-    im = im[:, ::-1, :]
+def adv_analyze_nii_read(fn, swap_x=False, swap_y=False):
+    img = nb.load(fn)
+    afn = img.affine
+    img = img.get_data() + 1024
+    img = np.swapaxes(img, 0, 1)
+    if not swap_x:
+        img = img[:, ::-1]
+    if swap_y:
+        img = img[::-1]
     voxel_dimensions = np.abs(np.diag(afn[:3, :3]))
-    shape0 = im.shape
+    shape0 = img.shape
 
     if voxel_dimensions[2] < 1.5:
-        im = im[:, :, ::2].copy()
+        img = img[..., ::2].copy()
         voxel_dimensions[2] *= 2
     elif voxel_dimensions[2] > 3:
-        new_size = (im.shape[0], im.shape[1], im.shape[2] * 2)
-        im = imresize(im, new_size, order=0)
+        new_size = (img.shape[0], img.shape[1], img.shape[2] * 2)
+        img = imresize(img, new_size, order=0)
         voxel_dimensions[2] /= 2
 
-    return im, voxel_dimensions, afn, shape0
+    return img, voxel_dimensions, afn, shape0
 
 
-def save_as_nii(img, affine, out_path):
+def save_as_nii(img, affine, out_path, swap_x=False, swap_y=False):
     img = img.astype(np.int16)
-    img = img[:, ::-1, :]
+    if not swap_x:
+        img = img[:, ::-1]
+    if swap_y:
+        img = img[::-1]
     img = np.swapaxes(img, 0, 1)
 
     affine = np.abs(affine) * np.eye(4, 4)
